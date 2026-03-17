@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+error.txt
+node_modules/
+test_parse.py

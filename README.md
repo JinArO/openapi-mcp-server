@@ -6,6 +6,16 @@ Every API endpoint becomes an MCP tool that LLMs can call directly.
 
 ## Quick Start
 
+### Option 1: npx (No Python needed on your machine)
+
+```bash
+npx openapi-mcp-server <swagger_json_url>
+npx openapi-mcp-server http://localhost:5244/swagger/v1/swagger.json
+npx openapi-mcp-server http://localhost:5244/swagger/v1/swagger.json --base-url http://localhost:5244
+```
+
+### Option 2: uv run (Direct from GitHub)
+
 ```bash
 uv run https://raw.githubusercontent.com/JinArO/openapi-mcp-server/master/openapi_to_mcp.py <swagger_json_url>
 ```
@@ -25,7 +35,26 @@ uv run https://raw.githubusercontent.com/JinArO/openapi-mcp-server/master/openap
 
 ## MCP Configuration
 
-### VS Code / Copilot (`mcp.json`)
+### VS Code / Copilot (`mcp.json`) — npx
+
+```json
+{
+  "servers": {
+    "my-api": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "openapi-mcp-server",
+        "http://localhost:5244/swagger/v1/swagger.json",
+        "--base-url",
+        "http://localhost:5244"
+      ]
+    }
+  }
+}
+```
+
+### VS Code / Copilot (`mcp.json`) — uv
 
 ```json
 {
