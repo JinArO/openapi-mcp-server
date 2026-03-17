@@ -9,9 +9,9 @@ Every API endpoint becomes an MCP tool that LLMs can call directly.
 ### Option 1: npx (No Python needed on your machine)
 
 ```bash
-npx openapi-mcp-server <swagger_json_url>
-npx openapi-mcp-server http://localhost:5244/swagger/v1/swagger.json
-npx openapi-mcp-server http://localhost:5244/swagger/v1/swagger.json --base-url http://localhost:5244
+npx swagger-to-mcp <swagger_json_url>
+npx swagger-to-mcp http://localhost:5244/swagger/v1/swagger.json
+npx swagger-to-mcp http://localhost:5244/swagger/v1/swagger.json --base-url http://localhost:5244
 ```
 
 ### Option 2: uv run (Direct from GitHub)
@@ -44,7 +44,7 @@ uv run https://raw.githubusercontent.com/JinArO/openapi-mcp-server/master/openap
       "command": "npx",
       "args": [
         "-y",
-        "openapi-mcp-server",
+        "swagger-to-mcp",
         "http://localhost:5244/swagger/v1/swagger.json",
         "--base-url",
         "http://localhost:5244"

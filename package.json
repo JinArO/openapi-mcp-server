@@ -1,9 +1,9 @@
 {
-  "name": "openapi-mcp-server",
+  "name": "swagger-to-mcp",
   "version": "1.0.0",
   "description": "Convert any OpenAPI/Swagger JSON to MCP tools server",
   "bin": {
-    "openapi-mcp-server": "./bin/cli.js"
+    "swagger-to-mcp": "./bin/cli.js"
   },
   "keywords": [
     "mcp",

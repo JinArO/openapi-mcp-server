@@ -8,14 +8,14 @@ const args = process.argv.slice(2);
 
 if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
   console.error(`
-openapi-mcp-server — Convert any OpenAPI/Swagger JSON to MCP tools
+swagger-to-mcp — Convert any OpenAPI/Swagger JSON to MCP tools
 
 Usage:
-  npx openapi-mcp-server <swagger_json_url> [--base-url <url>]
+  npx swagger-to-mcp <swagger_json_url> [--base-url <url>]
 
 Examples:
-  npx openapi-mcp-server http://localhost:5244/swagger/v1/swagger.json
-  npx openapi-mcp-server http://localhost:5244/swagger/v1/swagger.json --base-url http://localhost:5244
+  npx swagger-to-mcp http://localhost:5244/swagger/v1/swagger.json
+  npx swagger-to-mcp http://localhost:5244/swagger/v1/swagger.json --base-url http://localhost:5244
 `);
   process.exit(args.length === 0 ? 1 : 0);
 }
