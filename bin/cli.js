@@ -1,12 +1,25 @@
 #!/usr/bin/env node
 
-/**
- * swagger-to-mcp — Convert any OpenAPI/Swagger JSON to MCP tools server
- * Pure Node.js — no Python required.
- *
- * Usage:
- *   npx swagger-to-mcp <swagger_json_url> [--base-url <url>]
- */
+// =============================================================================
+// swagger-to-mcp — 將任何 OpenAPI/Swagger JSON 自動轉成 MCP Tools Server
+// =============================================================================
+//
+// 【核心原理】
+//   1. 讀取任何標準 swagger.json（OpenAPI 3.x / Swagger 2.0）
+//   2. 解析 paths → 每個 HTTP endpoint 變成一個 MCP Tool
+//   3. 透過 stdio transport 讓 LLM（如 GPT、Claude）可以呼叫這些 tools
+//
+// 【使用方式】
+//   npx swagger-to-mcp <swagger_json_url> [--base-url <url>]
+//
+// 【在 AIP 平台的 Startup Command】
+//   npx swagger-to-mcp https://your-api.com/swagger/v1/swagger.json
+//
+// 【技術棧】
+//   - @modelcontextprotocol/sdk → MCP 官方 SDK
+//   - zod → 參數 schema 驗證（MCP SDK 要求用 zod 定義 tool 參數）
+//   - Node.js 內建 http/https → 呼叫 API（不需額外安裝 axios/fetch）
+// =============================================================================
 
 const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
 const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
@@ -16,9 +29,12 @@ const http = require("http");
 const { URL } = require("url");
 
 // ---------------------------------------------------------------------------
-// 1. Parse CLI args
+// 1. 解析命令列參數
 // ---------------------------------------------------------------------------
-const args = process.argv.slice(2);
+// 最重要的是第一個參數：swagger.json 的 URL
+// 可選 --base-url 來覆蓋 API 的根路徑
+// ---------------------------------------------------------------------------
+const args = process.argv.slice(2);  // 去掉 node 和 script 路徑
 let swaggerUrl = null;
 let baseUrlOverride = null;
 
@@ -50,7 +66,10 @@ if (!swaggerUrl) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. HTTP helpers
+// 2. HTTP 工具函式
+// ---------------------------------------------------------------------------
+// httpGet()     → 用來下載 swagger.json
+// httpRequest() → MCP tool 被呼叫時，代替 LLM 去打真正的 API
 // ---------------------------------------------------------------------------
 function httpGet(url) {
   return new Promise((resolve, reject) => {
@@ -118,8 +137,17 @@ function httpRequest(method, url, queryParams, jsonBody) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. OpenAPI parser
+// 3. OpenAPI 解析器
 // ---------------------------------------------------------------------------
+// 讀取 swagger.json 的 paths，把每個 endpoint 抽出：
+//   - toolName    → MCP tool 的名稱（如 get_calculator_add）
+//   - method      → HTTP method（GET/POST/PUT/DELETE）
+//   - path        → URL path（如 /api/Calculator/add）
+//   - params      → query/path 參數
+//   - bodySchema  → POST/PUT 的 request body 結構
+// ---------------------------------------------------------------------------
+
+// 解析 $ref 引用（如 "#/components/schemas/BmiRequest"）
 function resolveRef(spec, ref) {
   const parts = ref.replace(/^#\//, "").split("/");
   let node = spec;
@@ -202,7 +230,14 @@ function parseOperations(spec) {
 }
 
 // ---------------------------------------------------------------------------
-// 4. Build & run MCP server
+// 4. 建立 MCP Server 並註冊 Tools
+// ---------------------------------------------------------------------------
+// 核心邏輯：
+//   server.tool(name, description, zodSchema, handler)
+//   - name        → LLM 看到的工具名稱
+//   - description → LLM 判斷何時該用這個工具的描述
+//   - zodSchema   → 參數定義（zod 格式）
+//   - handler     → 當 LLM 呼叫時，實際發出 HTTP request 的函式
 // ---------------------------------------------------------------------------
 function registerTool(server, spec, baseUrl, op) {
   const { toolName, method, path: pathTemplate, description, params, bodySchema, bodyDescription } = op;
@@ -215,6 +250,8 @@ function registerTool(server, spec, baseUrl, op) {
   const queryParams = params.filter((p) => p.in === "query");
   const hasBody = bodySchema !== null;
 
+  // --- 重點：用 zod 定義參數 schema ---
+  // MCP SDK 要求參數用 zod 格式，所以我們把 OpenAPI 的參數轉成 zod schema
   const shape = {};
   for (const p of [...pathParams, ...queryParams]) {
     shape[p.name] = z.string().optional().describe(p.description || `${p.in} parameter: ${p.name}`);
@@ -223,6 +260,9 @@ function registerTool(server, spec, baseUrl, op) {
     shape["body"] = z.string().optional().describe("JSON request body");
   }
 
+  // --- 重點：註冊 MCP Tool ---
+  // server.tool() 是整個程式最核心的一行
+  // 它告訴 MCP SDK：「有一個工具叫 xx，參數是 yy，告它的時候執行 zz」
   server.tool(toolName, fullDescription, shape, async (paramsObj) => {
     try {
       let urlPath = pathTemplate;
@@ -278,7 +318,8 @@ async function main() {
   const title = info.title || "OpenAPI MCP Server";
   console.error(`📘 ${title} v${info.version || "?"}`);
 
-  // Determine base URL
+  // --- 重點：決定 API 的 base URL ---
+  // 優先順序：命令列 --base-url > OpenAPI 3.x servers > Swagger 2.0 host > URL 推導
   let baseUrl = baseUrlOverride;
   if (!baseUrl) {
     if (spec.servers?.[0]?.url?.startsWith("http")) {
@@ -302,6 +343,9 @@ async function main() {
   }
 
   console.error(`\n🚀 MCP server ready! (${operations.length} tools)`);
+  // --- 重點：MCP 的 stdio transport ---
+  // MCP 用 stdin/stdout 跟 LLM 通訊（JSON-RPC）
+  // 所以所有 console.log 不能用，只能用 console.error 輸出 debug 訊息
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }

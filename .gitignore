@@ -3,3 +3,8 @@ __pycache__/
 error.txt
 node_modules/
 test_parse.py
+requirements.txt
+openapi_to_mcp.py
+publish/
+deploy.zip
+*.http
