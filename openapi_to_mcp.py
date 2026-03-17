@@ -325,8 +325,8 @@ def main():
 
     # Build & run MCP server
     server = build_mcp_server(spec, base_url)
-    print(f"\n🚀 MCP server ready! (stdio transport)", file=sys.stderr)
-    server.run(transport="stdio")
+    print(f"\n🚀 MCP server ready!", file=sys.stderr)
+    server.run()
 
 
 if __name__ == "__main__":
